@@ -1,5 +1,15 @@
 streamlit
 facenet-pytorch
+torch
+torchvision
+Pillow
 qdrant-client
 python-dotenv
-pydantic-settings
+datasets
+tqdm
+numpy
+opencv-python
+huggingface-hub
+requests
+urllib3
+blinker

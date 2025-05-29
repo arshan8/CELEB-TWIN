@@ -70,7 +70,18 @@ def main():
         print("Connecting to Qdrant...")
         qdrant_client = get_qdrant_client()
 
-        # Create the collection
+        # Check if collection already has data
+        collection_name = "celebrities"
+        collections = qdrant_client.get_collections().collections
+        collection_names = [c.name for c in collections]
+
+        if collection_name in collection_names:
+            count = qdrant_client.count(collection_name=collection_name, exact=True).count
+            if count > 0:
+                print(f"[INFO] Collection '{collection_name}' already has {count} points. Skipping embedding generation.")
+                return  # Exit early if already populated
+
+        # Create the collection (if not exists)
         print("Setting up collection...")
         try:
             create_collection(qdrant_client)

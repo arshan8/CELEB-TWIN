@@ -1,4 +1,4 @@
-
+<pre>
 # 1
 
 import numpy as np
@@ -292,6 +292,8 @@ print("Hessian (2x2):")
 print(hessian)
 
 
+
+</pre>
 
 
 

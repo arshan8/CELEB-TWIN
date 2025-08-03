@@ -1,4 +1,4 @@
-
+<pre>
 
 # 5. Predict
 test_comment = ["very bad"]
@@ -190,7 +190,7 @@ print("Classification Report:\n")
 print(classification_report(labels, preds))
 
 
-
+</pre>
 
 
 

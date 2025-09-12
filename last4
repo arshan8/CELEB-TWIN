@@ -1,122 +1,62 @@
-
 <pre>
 
-#CNN
-
 import numpy as np
+import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense, Conv1D, GlobalMaxPooling1D
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from tensorflow.keras.layers import LSTM, Dense
+from sklearn.metrics import classification_report, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-# Sample data
-comments = ["bad", "very", "amazing", "worst", "not", "excellent", "sucks", "loved"]
-labels = ["shit", "good", "life", "game", "bad", "job", "girl", "her"]  
 
-# Tokenize X
-tokenizer_x = Tokenizer()
-tokenizer_x.fit_on_texts(comments)
-X = pad_sequences(tokenizer_x.texts_to_sequences(comments), padding='post')
+# Generate sine wave
+x = np.linspace(0, 100, 1000)
+y = np.sin(x) + 0.1 * np.random.randn(len(x))
 
-# Tokenize y
-tokenizer_y = Tokenizer()
-tokenizer_y.fit_on_texts(labels)
-y = np.array([s[0] for s in tokenizer_y.texts_to_sequences(labels)])
+# Prepare sequences
+window = 20
+X, Y = [], []
+for i in range(len(y) - window):
+    X.append(y[i:i+window])
+    Y.append(y[i+window])
+X, Y = np.array(X), np.array(Y)
+X = X.reshape((X.shape[0], X.shape[1], 1))
 
-# Define CNN model
-vocab_size_x = len(tokenizer_x.word_index) + 1
-vocab_size_y = len(tokenizer_y.word_index) + 1
+# Train/test split
+split = int(0.8 * len(X))
+X_train, Y_train = X[:split], Y[:split]
+X_test, Y_test = X[split:], Y[split:]
 
+# Model
 model = Sequential([
-    Embedding(vocab_size_x, 8, input_length=X.shape[1]),
-    Conv1D(16, 3, activation='relu', padding='same'),  # 1D conv over text
-    GlobalMaxPooling1D(),                 
-    Dense(vocab_size_y, activation='softmax')
+    LSTM(50, activation='tanh', input_shape=(window, 1)),
+    Dense(1)
 ])
-
-model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# Train
-model.fit(X, y, epochs=50, verbose=0)
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, Y_train, epochs=20, verbose=0)
 
 # Predict
-pred_idx = model.predict(X, verbose=0).argmax(axis=1)
+Y_pred = model.predict(X_test)
 
-# Map back to words
-inv_map = {v:k for k,v in tokenizer_y.word_index.items()}
-pred_words = [inv_map[i] for i in pred_idx]
-print("Predicted labels:", pred_words)
-
-# Classification report & confusion matrix
-print("\nClassification Report:\n")
-print(classification_report(y, pred_idx, target_names=list(tokenizer_y.word_index.keys())))
-
-cm = confusion_matrix(y, pred_idx)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=list(tokenizer_y.word_index.keys()))
-disp.plot(cmap="Blues", values_format="d")
+# Plot actual vs predicted sine wave
+plt.figure(figsize=(10,5))
+plt.plot(range(len(Y_test)), Y_test, label="Actual", color="blue")
+plt.plot(range(len(Y_pred)), Y_pred, label="Predicted", color="red")
+plt.title("Sine Wave Prediction (LSTM)")
+plt.legend()
 plt.show()
 
 
+y_true_cls = np.array([0, 1, 1, 0, 1, 0, 1, 1, 0, 1])
 
+# Fake predictions (not perfect, some errors)
+y_pred_cls = np.array([0, 1, 0, 0, 1, 0, 1, 0, 1, 1])
 
+# Classification Report
+print(classification_report(y_true_cls, y_pred_cls))
 
-
-# RNN
-
-import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, SimpleRNN, Dense
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
-import matplotlib.pyplot as plt
-
-# Sample data
-comments = ["bad", "very", "amazing", "worst", "not", "excellent", "sucks", "loved"]
-labels = ["shit", "good", "life", "game", "bad", "job", "girl", "her"]  
-
-# Tokenize X
-tokenizer_x = Tokenizer()
-tokenizer_x.fit_on_texts(comments)
-X = pad_sequences(tokenizer_x.texts_to_sequences(comments), padding='post')
-
-# Tokenize y
-tokenizer_y = Tokenizer()
-tokenizer_y.fit_on_texts(labels)
-y = np.array([s[0] for s in tokenizer_y.texts_to_sequences(labels)])
-
-# Define RNN model
-vocab_size_x = len(tokenizer_x.word_index) + 1
-vocab_size_y = len(tokenizer_y.word_index) + 1
-
-model = Sequential([
-    Embedding(vocab_size_x, 8, input_length=X.shape[1]),
-    SimpleRNN(16),
-    Dense(vocab_size_y, activation='softmax')
-])
-
-model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# Train
-model.fit(X, y, epochs=50, verbose=0)
-
-# Predict
-pred_idx = model.predict(X, verbose=0).argmax(axis=1)
-
-# Map back to words
-inv_map = {v:k for k,v in tokenizer_y.word_index.items()}
-pred_words = [inv_map[i] for i in pred_idx]
-print("Predicted labels:", pred_words)
-
-# Classification report & confusion matrix
-print("\nClassification Report:\n")
-print(classification_report(y, pred_idx, target_names=list(tokenizer_y.word_index.keys())))
-
-cm = confusion_matrix(y, pred_idx)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=list(tokenizer_y.word_index.keys()))
-disp.plot(cmap="Blues", values_format="d")
+# Confusion Matrix
+ConfusionMatrixDisplay.from_predictions(y_true_cls, y_pred_cls, cmap="Blues")
+plt.title("Confusion Matrix (Simulated)")
 plt.show()
 
 
@@ -125,121 +65,78 @@ plt.show()
 
 
 
-#LSTM
+
+
+
+
+
+
+
+
+
+
+
 import numpy as np
+import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from tensorflow.keras.layers import SimpleRNN, Dense
+from sklearn.metrics import classification_report, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-# Sample data
-comments = ["bad", "very", "amazing", "worst", "not", "excellent", "sucks", "loved"]
-labels = ["shit", "good", "life", "game", "bad", "job", "girl", "her"]  
 
-# Tokenize X
-tokenizer_x = Tokenizer()
-tokenizer_x.fit_on_texts(comments)
-X = pad_sequences(tokenizer_x.texts_to_sequences(comments), padding='post')
+# Generate sine wave
+x = np.linspace(0, 100, 1000)
+y = np.sin(x) + 0.1 * np.random.randn(len(x))
 
-# Tokenize y
-tokenizer_y = Tokenizer()
-tokenizer_y.fit_on_texts(labels)
-y = np.array([s[0] for s in tokenizer_y.texts_to_sequences(labels)])
+# Prepare sequences
+window = 20
+X, Y = [], []
+for i in range(len(y) - window):
+    X.append(y[i:i+window])
+    Y.append(y[i+window])
+X, Y = np.array(X), np.array(Y)
+X = X.reshape((X.shape[0], X.shape[1], 1))
 
-# Define LSTM model
-vocab_size_x = len(tokenizer_x.word_index) + 1
-vocab_size_y = len(tokenizer_y.word_index) + 1
+# Train/test split
+split = int(0.8 * len(X))
+X_train, Y_train = X[:split], Y[:split]
+X_test, Y_test = X[split:], Y[split:]
 
+# Model
 model = Sequential([
-    Embedding(vocab_size_x, 8, input_length=X.shape[1]),
-    LSTM(16),
-    Dense(vocab_size_y, activation='softmax')
+    SimpleRNN(50, activation='tanh', input_shape=(window, 1)),
+    Dense(1)
 ])
-
-model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# Train
-model.fit(X, y, epochs=50, verbose=0)
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, Y_train, epochs=20, verbose=0)
 
 # Predict
-pred_idx = model.predict(X, verbose=0).argmax(axis=1)
+Y_pred = model.predict(X_test)
 
-# Map back to words
-inv_map = {v:k for k,v in tokenizer_y.word_index.items()}
-pred_words = [inv_map[i] for i in pred_idx]
-print("Predicted labels:", pred_words)
+# Plot actual vs predicted sine wave
+plt.figure(figsize=(10,5))
+plt.plot(range(len(Y_test)), Y_test, label="Actual", color="blue")
+plt.plot(range(len(Y_pred)), Y_pred, label="Predicted", color="red")
+plt.title("Sine Wave Prediction (LSTM)")
+plt.legend()
+plt.show()
 
-# Classification report & confusion matrix
-print("\nClassification Report:\n")
-print(classification_report(y, pred_idx, target_names=list(tokenizer_y.word_index.keys())))
 
-cm = confusion_matrix(y, pred_idx)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=list(tokenizer_y.word_index.keys()))
-disp.plot(cmap="Blues", values_format="d")
+y_true_cls = np.array([0, 1, 1, 0, 1, 0, 1, 1, 0, 1])
+
+# Fake predictions (not perfect, some errors)
+y_pred_cls = np.array([0, 1, 0, 0, 1, 0, 1, 0, 1, 1])
+
+# Classification Report
+print(classification_report(y_true_cls, y_pred_cls))
+
+# Confusion Matrix
+ConfusionMatrixDisplay.from_predictions(y_true_cls, y_pred_cls, cmap="Blues")
+plt.title("Confusion Matrix (Simulated)")
 plt.show()
 
 
 
-
-
-
-#GRU
-
-import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, GRU, Dense
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
-import matplotlib.pyplot as plt
-
-# Sample data
-comments = ["bad", "very", "amazing", "worst", "not", "excellent", "sucks", "loved"]
-labels = ["shit", "good", "life", "game", "bad", "job", "girl", "her"]  
-
-# Tokenize X
-tokenizer_x = Tokenizer()
-tokenizer_x.fit_on_texts(comments)
-X = pad_sequences(tokenizer_x.texts_to_sequences(comments), padding='post')
-
-# Tokenize y
-tokenizer_y = Tokenizer()
-tokenizer_y.fit_on_texts(labels)
-y = np.array([s[0] for s in tokenizer_y.texts_to_sequences(labels)])
-
-# Define GRU model
-vocab_size_x = len(tokenizer_x.word_index) + 1
-vocab_size_y = len(tokenizer_y.word_index) + 1
-
-model = Sequential([
-    Embedding(vocab_size_x, 8, input_length=X.shape[1]),
-    GRU(16),
-    Dense(vocab_size_y, activation='softmax')
-])
-
-model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# Train
-model.fit(X, y, epochs=50, verbose=0)
-
-# Predict
-pred_idx = model.predict(X, verbose=0).argmax(axis=1)
-
-# Map back to words
-inv_map = {v:k for k,v in tokenizer_y.word_index.items()}
-pred_words = [inv_map[i] for i in pred_idx]
-print("Predicted labels:", pred_words)
-
-# Classification report & confusion matrix
-print("\nClassification Report:\n")
-print(classification_report(y, pred_idx, target_names=list(tokenizer_y.word_index.keys())))
-
-cm = confusion_matrix(y, pred_idx)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=list(tokenizer_y.word_index.keys()))
-disp.plot(cmap="Blues", values_format="d")
-plt.show()
 
 
 
@@ -250,3 +147,110 @@ plt.show()
 
 
 
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import GRU, Dense
+from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+
+
+# Generate sine wave
+x = np.linspace(0, 100, 1000)
+y = np.sin(x) + 0.1 * np.random.randn(len(x))
+
+# Prepare sequences
+window = 20
+X, Y = [], []
+for i in range(len(y) - window):
+    X.append(y[i:i+window])
+    Y.append(y[i+window])
+X, Y = np.array(X), np.array(Y)
+X = X.reshape((X.shape[0], X.shape[1], 1))
+
+# Train/test split
+split = int(0.8 * len(X))
+X_train, Y_train = X[:split], Y[:split]
+X_test, Y_test = X[split:], Y[split:]
+
+# Model
+model = Sequential([
+    GRU(50, activation='tanh', input_shape=(window, 1)),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, Y_train, epochs=20, verbose=0)
+
+# Predict
+Y_pred = model.predict(X_test)
+
+# Plot actual vs predicted sine wave
+plt.figure(figsize=(10,5))
+plt.plot(range(len(Y_test)), Y_test, label="Actual", color="blue")
+plt.plot(range(len(Y_pred)), Y_pred, label="Predicted", color="red")
+plt.title("Sine Wave Prediction (LSTM)")
+plt.legend()
+plt.show()
+
+
+y_true_cls = np.array([0, 1, 1, 0, 1, 0, 1, 1, 0, 1])
+
+# Fake predictions (not perfect, some errors)
+y_pred_cls = np.array([0, 1, 0, 0, 1, 0, 1, 0, 1, 1])
+
+# Classification Report
+print(classification_report(y_true_cls, y_pred_cls))
+
+# Confusion Matrix
+ConfusionMatrixDisplay.from_predictions(y_true_cls, y_pred_cls, cmap="Blues")
+plt.title("Confusion Matrix (Simulated)")
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+
+# Load MNIST
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+X_train, X_test = X_train/255.0, X_test/255.0  # scale
+X_train = X_train[..., None]  # add channel dim
+X_test = X_test[..., None]
+
+# CNN model
+model = Sequential([
+    Conv2D(8, (3,3), activation="relu", input_shape=(28,28,1)),
+    MaxPooling2D(),
+    Flatten(),
+    Dense(10, activation="softmax")
+])
+model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+
+# Train quick
+model.fit(X_train, y_train, epochs=1, batch_size=128, verbose=1)
+
+# Predict
+y_pred = model.predict(X_test).argmax(axis=1)
+
+# Print classification report
+print("\nClassification Report:\n")
+print(classification_report(y_test, y_pred))
+
+# Show confusion matrix
+ConfusionMatrixDisplay.from_predictions(y_test, y_pred, cmap="Blues")
+plt.title("Confusion Matrix (CNN on MNIST)")
+plt.show()

@@ -1,512 +1,377 @@
 <pre>
-# 1
 
-import numpy as np
 
-class Perceptron:
-    def __init__(self, input_size, learning_rate=0.1, epochs=10):
-        self.weights = np.zeros(input_size + 1)  # +1 for bias
-        self.lr = learning_rate
-        self.epochs = epochs
+    #1
+import csv
 
-    def activation(self, x):
-        return 1 if x >= 0 else 0
+def find_s(data):
+    # Initialize hypothesis with '?' for all attributes except target
+    hypothesis = ['?'] * (len(data[0]) - 1)
     
+    for example in data[1:]:  # skip header row
+        if example[-1] == 'Yes':  # Only consider positive examples
+            for i in range(len(hypothesis)):
+                if hypothesis[i] == '?':
+                    hypothesis[i] = example[i]
+                elif hypothesis[i] != example[i]:
+                    hypothesis[i] = '?'
+    return hypothesis
+
+# Read CSV and run
+with open(r"C:\Users\ARSHAN\Downloads\Weather.csv", 'r') as file:
+    data = list(csv.reader(file))
+    result = find_s(data)
+    print("Final Hypothesis:", result)
+
+
+
+
+
+#2
+import csv
+
+def candidate_elimination(data):
+    # Initialize specific and general hypotheses
+    specific_h = ['?' for _ in range(len(data[0])-1)]
+    general_h = [['?' for _ in range(len(data[0])-1)] for _ in range(len(data[0])-1)]
     
-
-    def predict(self, inputs):
-        summation = np.dot(inputs, self.weights[1:]) + self.weights[0]
-        return self.activation(summation)
-
-    def train(self, X, y):
-        for _ in range(self.epochs):
-            for xi, target in zip(X, y):
-                pred = self.predict(xi)
-                error = target - pred
-                self.weights[1:] += self.lr * error * xi
-                self.weights[0] += self.lr * error
-#wj = wj + learning_rate * (true_output - predicted_output) * xj
-#bias = bias + learning_rate * (true_output - predicted_output)
-
-
-    def test(self, X):
-        return [self.predict(xi) for xi in X]
-
+    for example in data:
+        if example[-1] == 'Yes':  # Positive example
+            for i in range(len(specific_h)):
+                if specific_h[i] == '?' or specific_h[i] == example[i]:
+                    specific_h[i] = example[i]
+                else:
+                    specific_h[i] = '?'
+        else:  # Negative example
+            for i in range(len(specific_h)):
+                if specific_h[i] != example[i]:
+                    general_h[i][i] = specific_h[i] if specific_h[i] != '?' else '?'
+                else:
+                    general_h[i][i] = '?'
     
-    
-    
-def or_gate():
-    X = np.array([[0,0], [0,1], [1,0], [1,1]])
-    y = np.array([0, 1, 1, 1])
+    return specific_h, [g for g in general_h if g != ['?' for _ in range(len(data[0])-1)]]
 
-    p = Perceptron(input_size=2)
-    p.train(X, y)
-    
-    print("OR Gate Output:")
-    for xi in X:
-        print(f"{xi} -> {p.predict(xi)}")
-        
-    return p,X,y
-
-
-
-def and_gate():
-    X = np.array([[0,0], [0,1], [1,0], [1,1]])
-    y = np.array([0, 0, 0, 1])
-
-    p = Perceptron(input_size=2)
-    p.train(X, y)
-    
-    print("AND Gate Output:")
-    for xi in X:
-        print(f"{xi} -> {p.predict(xi)}")
-        
-    return p,X,y
+# Read CSV and run
+with open(r"C:\Users\ARSHAN\Downloads\Weather.csv", 'r') as file:
+    data = list(csv.reader(file))
+    specific, general = candidate_elimination(data)
+    print("Specific Hypothesis:", specific)
+    print("General Hypothesis:", general)
 
 
 
 
 
+#3
 
+    import pandas as pd
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 import matplotlib.pyplot as plt
-import numpy as np
-def plot_decision_boundary(perceptron, X, y):
-    # Generate grid points
-    x1 = np.linspace(-1, 2, 100)
-    x2 = np.linspace(-1, 2, 100)
-    xx, yy = np.meshgrid(x1, x2)
 
-    # Predict on grid
-    Z = np.array([perceptron.predict([a, b]) for a, b in zip(xx.ravel(), yy.ravel())])
-    Z = Z.reshape(xx.shape)
+# ---- Read CSV ----
+df = pd.read_csv(r"C:\Users\ARSHAN\Downloads\playtennis.csv")
 
-    # Plot
-    plt.contourf(xx, yy, Z, alpha=0.5)
-    plt.scatter(X[:,0], X[:,1], c=y)
-    plt.show()
+# Split into features and target
+X = df.iloc[:, :-1]   # all columns except last
+y = df.iloc[:, -1]    # last column (target)
 
-p,X,y = and_gate()
-plot_decision_boundary(p, X, y)
+# ---- Train Decision Tree ----
+tree = DecisionTreeClassifier(criterion='entropy')
+tree.fit(X, y)
 
+# ---- Accuracy ----
+print("Training Accuracy:", tree.score(X, y))
 
-
+# ---- Plot the tree ----
+plt.figure(figsize=(10, 6))
+plot_tree(tree, feature_names=df.columns[:-1], class_names=['No', 'Yes'], filled=True)
+plt.show()
 
 
 
 
 
-from sklearn.datasets import load_wine
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+#4
+
 from sklearn.neural_network import MLPClassifier
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
+from sklearn.metrics import classification_report
 import numpy as np
 
-# Load data
-wine = load_wine()
-X, y = wine.data, wine.target
+# XOR dataset
+X = np.array([[0,0],
+              [0,1],
+              [1,0],
+              [1,1]])
+y = np.array([0, 1, 1, 0])   # labels
 
-# Scale features
+# ANN: 1 hidden layer (2 neurons), ReLU, sigmoid output
+mlp = MLPClassifier(hidden_layer_sizes=(2,),
+                    activation='relu',
+                    solver='sgd',
+                    learning_rate_init=0.1,
+                    max_iter=1000,
+                    random_state=0, verbose = 1)
+
+# Train
+mlp.fit(X, y)
+
+# Predictions
+y_pred = mlp.predict(X)
+
+# Classification report
+print("Classification Report:\n")
+print(classification_report(y, y_pred))
+
+
+
+
+#5
+
+    import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report, accuracy_score
+
+# Load dataset
+data = pd.read_csv(r"C:\Users\ARSHAN\Downloads\DBetes.csv")  # update path if needed
+
+# Features (X) and target (y)
+X = data.iloc[:, :-1]   # all columns except last
+y = data.iloc[:, -1]    # last column = Outcome
+
+# Standardize features
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# Dimensionality reduction for visualization
-pca = PCA(n_components=2)
-X_reduced = pca.fit_transform(X_scaled)
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.3, random_state=0
+)
 
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X_reduced, y, test_size=0.2, random_state=42)
-
-# Train MLP
-clf = MLPClassifier(hidden_layer_sizes=(8,), activation='relu', max_iter=10000)
-clf.fit(X_train, y_train)
-
-# Accuracy
-print(f"Training Accuracy: {clf.score(X_train, y_train):.2f}")
-print(f"Test Accuracy: {clf.score(X_test, y_test):.2f}")
-
-# Plot decision boundary
-def plot_decision_boundary(model, X, y):
-    x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
-    y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 200),
-                         np.linspace(y_min, y_max, 200))
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
-
-    plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.6)
-    plt.scatter(X[:, 0], X[:, 1], c=y, edgecolors='k', cmap=plt.cm.coolwarm)
-    plt.title("MLP Wine Classification (PCA 2D)")
-    plt.show()
-
-plot_decision_boundary(clf, X_reduced, y)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import numpy as np
-from sklearn.neural_network import MLPClassifier
-import matplotlib.pyplot as plt
-
-# Generate simple raw random data for two crab species
-# Class 0: Crab A
-X0 = np.random.rand(100, 2) + 1  # values roughly between 1 and 2
-y0 = np.zeros(100)
-
-# Class 1: Crab B
-X1 = np.random.rand(100, 2) + 3  # values roughly between 3 and 4
-y1 = np.ones(100)
-
-# Combine data
-X = np.vstack((X0, X1))
-y = np.hstack((y0, y1))
-
-# Train MLP classifier
-clf = MLPClassifier(hidden_layer_sizes=(8,), activation='relu', max_iter=10000)
-clf.fit(X, y)
-
-# Print predictions for first 5 samples
-print("First 5 predictions:")
-for i in range(5):
-    print(f"{X[i]} -> {clf.predict([X[i]])[0]}")
-
-# Plot decision boundary
-def plot_decision_boundary(model, X, y):
-    x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
-    y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 200),
-                         np.linspace(y_min, y_max, 200))
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
-
-    plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.6)
-    plt.scatter(X[:, 0], X[:, 1], c=y, edgecolors='k', cmap=plt.cm.coolwarm)
-    plt.title("MLP Crab Classification Decision Boundary")
-    plt.show()
-
-plot_decision_boundary(clf, X, y)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-from sklearn.neural_network import MLPClassifier
-import numpy as np
-import matplotlib.pyplot as plt
-
-# XOR data
-X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([0,1,1,0])
-
-# Train MLP
-clf = MLPClassifier(hidden_layer_sizes=(8,), activation='relu', max_iter=10000)
-clf.fit(X, y)
+# Train Naive Bayes
+model = GaussianNB()
+model.fit(X_train, y_train)
 
 # Predict
-print("XOR Output:")
-for xi in X:
-    print(f"{xi} -> {clf.predict([xi])[0]}")
+y_pred = model.predict(X_test)
 
-# Plot decision boundary
-def plot_decision_boundary(model, X, y):
-    x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
-    y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 200),
-                         np.linspace(y_min, y_max, 200))
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+# Accuracy
+print("Accuracy:", accuracy_score(y_test, y_pred))
 
-    plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.6)
-    plt.scatter(X[:, 0], X[:, 1], c=y, edgecolors='k', cmap=plt.cm.coolwarm)
-    plt.title("MLP XOR Classification Decision Boundary")
-    plt.show()
-
-plot_decision_boundary(clf, X, y)
+# Precision, Recall, F1
+print("\nClassification Report:\n")
+print(classification_report(y_test, y_pred))
 
 
 
 
 
+#6
+    import pandas as pd
+from pgmpy.models import BayesianModel
+from pgmpy.estimators import MaximumLikelihoodEstimator
+from pgmpy.inference import VariableElimination
+
+# Load dataset from CSV
+data = pd.read_csv("6a.csv")
+heart_disease = data  # Use the loaded data directly
+
+# Define the Bayesian model structure
+model = BayesianModel([
+    ('age', 'Lifestyle'),
+    ('Gender', 'Lifestyle'),
+    ('Family', 'heartdisease'),
+    ('diet', 'cholestrol'),
+    ('Lifestyle', 'diet'),
+    ('cholestrol', 'heartdisease')
+])  # Removed duplicate ('diet', 'cholestrol')
+
+# Fit the model with the data
+model.fit(heart_disease, estimator=MaximumLikelihoodEstimator)
+
+# Create inference object
+HeartDisease_infer = VariableElimination(model)
+
+# User input prompts
+print('For Age enter: SuperSeniorCitizen:0, SeniorCitizen:1, MiddleAged:2, Youth:3, Teen:4')
+print('For Gender enter: Male:0, Female:1')
+print('For Family History enter: Yes:1, No:0')
+print('For Diet enter: High:0, Medium:1')
+print('For Lifestyle enter: Athlete:0, Active:1, Moderate:2, Sedentary:3')
+print('For Cholesterol enter: High:0, BorderLine:1, Normal:2')
+
+# Get evidence from user
+evidence = {
+    'age': int(input('Enter Age (0-4): ')),
+    'Gender': int(input('Enter Gender (0-1): ')),
+    'Family': int(input('Enter Family History (0-1): ')),
+    'diet': int(input('Enter Diet (0-1): ')),
+    'Lifestyle': int(input('Enter Lifestyle (0-3): ')),
+    'cholestrol': int(input('Enter Cholesterol (0-2): '))
+}
+
+# Query the probability of heart disease
+q = HeartDisease_infer.query(variables=['heartdisease'], evidence=evidence)
+
+# Print results
+print("\nProbability of having heart disease:")
+print(f"P(Heart Disease = Yes) = {q.values[1]}")  # Yes is index 1
+print(f"P(Heart Disease = No) = {q.values[0]}")   # No is index 0
 
 
 
 
+
+
+
+
+#7
+    import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
+# Set random seed for reproducibility
+np.random.seed(110)
+
+# Generate synthetic data
+red_mean, red_std = 3, 0.8    # Red cluster mean and standard deviation
+blue_mean, blue_std = 7, 1    # Blue cluster mean and standard deviation
+red = np.random.normal(red_mean, red_std, size=40)   # Red data points
+blue = np.random.normal(blue_mean, blue_std, size=40) # Blue data points
+both_colours = np.sort(np.concatenate((red, blue)))   # Combine and sort
+y = np.zeros(len(both_colours))                      # Y-axis placeholder
+
+# Perform K-Means with 2 clusters
+kmeans = KMeans(n_clusters=2)
+kmeans.fit(both_colours.reshape(-1, 1))  # Reshape for 1D data
+labels = kmeans.labels_  # Cluster assignments
+
+# Elbow curve to find optimal number of clusters
+Nc = range(1, 5)  # Test 1 to 4 clusters
+scores = [KMeans(n_clusters=i).fit(both_colours.reshape(-1, 1)).score(both_colours.reshape(-1, 1)) for i in Nc]
+
+# Plot Elbow curve
+plt.figure(figsize=(8, 5))
+plt.plot(Nc, scores, marker='o')
+plt.xlabel('Number of Clusters')
+plt.ylabel('Score')
+plt.title('Elbow Curve')
+plt.show()
+
+# Plot clustering result
+plt.figure(figsize=(8, 5))
+plt.scatter(both_colours, y, c=labels, cmap='bwr')
+plt.xlabel('Data Points')
+plt.ylabel('None')
+plt.title('2 Cluster K-Means')
+plt.show()
+
+
+
+
+#8
+    
+from sklearn.datasets import load_iris
+iris = load_iris()
+print("Feature Names:",iris.feature_names)
+print("Iris Data:",iris.data)
+print("Target Names:",iris.target_names)
+print("Target:",iris.target)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(
+      iris.data, iris.target, test_size = .25)
+
+from sklearn.neighbors import KNeighborsClassifier
+clf = KNeighborsClassifier()
+clf.fit(X_train, y_train)
+
+print(" Accuracy=",clf.score(X_test, y_test))
+
+print("Predicted Data")
+print(clf.predict(X_test))
+prediction=clf.predict(X_test)
+print("Test data :")
+print(y_test)
+
+diff=prediction-y_test
+print("Result is ")
+print(diff)
+print('Total no of samples misclassied =', sum(abs(diff))) 
+
+
+
+
+
+
+
+
+#9
 
 import numpy as np
-
-# Define your scalar function f(x, y)
-def f(x, y):
-    return x**2 * y + y**3
-
-# Compute gradient (Jacobian: 1x2)
-def compute_jacobian(f, x, y, h=1e-5):
-    df_dx = (f(x + h, y) - f(x - h, y)) / (2*h)
-    df_dy = (f(x, y + h) - f(x, y - h)) / (2*h)
-    return np.array([[df_dx, df_dy]])  # shape (1, 2)
-
-# Compute Hessian (2x2)
-def compute_hessian(f, x, y, h=1e-5):
-    d2f_dx2 = (f(x + h, y) - 2*f(x, y) + f(x - h, y)) / (h**2)
-    d2f_dy2 = (f(x, y + h) - 2*f(x, y) + f(x, y - h)) / (h**2)
-    d2f_dxdy = (
-        f(x + h, y + h) - f(x + h, y - h) - f(x - h, y + h) + f(x - h, y - h)
-    ) / (4 * h**2)
-
-    return np.array([
-        [d2f_dx2, d2f_dxdy],
-        [d2f_dxdy, d2f_dy2]
-    ])
-
-# Example usage
-x_val, y_val = 1.0, 2.0
-
-jacobian = compute_jacobian(f, x_val, y_val)
-hessian = compute_hessian(f, x_val, y_val)
-
-print("Jacobian (1x2):", jacobian)
-print("Hessian (2x2):")
-print(hessian)
-
-
-
-</pre>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<pre>
-
-# 5. Predict
-test_comment = ["very bad"]
-test_seq = tokenizer.texts_to_sequences(test_comment)
-test_pad = pad_sequences(test_seq, maxlen=3)
-pred = model.predict(test_pad, verbose=0)
-print("Sentiment score (0=neg, 1=pos):", pred[0][0])
-
-
-
-
-
-
-
-
-import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report
-
-# 1. Data
-comments = ["bad shit", "very good", "worst ever", "amazing", "shit movie", "awesome experience"]
-y = np.array([0, 1, 0, 1, 0, 1])  # 0 = negative, 1 = positive
-
-# 2. Tokenize
-tokenizer = Tokenizer()
-tokenizer.fit_on_texts(comments)
-sequences = tokenizer.texts_to_sequences(comments)
-X = pad_sequences(sequences, maxlen=3)
-
-# 3. Model
-model = Sequential([
-    Embedding(input_dim=50, output_dim=8, input_length=3),
-    LSTM(10),
-    Dense(1, activation='sigmoid')
-])
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-
-# 4. Train
-model.fit(X, y, epochs=100, verbose=0)
-
-# 5. Predict and Report
-pred_probs = model.predict(X, verbose=0)
-pred_labels = (pred_probs > 0.5).astype(int).flatten()
-
-print(classification_report(y, pred_labels, target_names=['Negative', 'Positive']))
-
-
-
-
-
-
-
-
-import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SimpleRNN, Embedding, Dense
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report
-
-# 1. Sample data
-comments = ["bad shit", "very good", "amazing", "worst ever", "not bad", "excellent", "sucks", "loved it"]
-labels = [0, 1, 1, 0, 1, 1, 0, 1]  # 0 = negative, 1 = positive
-
-# 2. Tokenize and pad
-tokenizer = Tokenizer()
-tokenizer.fit_on_texts(comments)
-sequences = tokenizer.texts_to_sequences(comments)
-padded = pad_sequences(sequences, padding='post')
-
-# 3. Define model
-vocab_size = len(tokenizer.word_index) + 1
-model = Sequential([
-    Embedding(input_dim=vocab_size, output_dim=8, input_length=padded.shape[1]),
-    SimpleRNN(16),
-    Dense(1, activation='sigmoid')
-])
-
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# 4. Train
-model.fit(padded, np.array(labels), epochs=20, verbose=0)
-
-# 5. Predict and report
-preds = (model.predict(padded) > 0.5).astype("int32").flatten()
-print("Classification Report:\n")
-print(classification_report(labels, preds))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report
-import numpy as np
-
-# 1. Sample data
-comments = ["bad shit", "very good", "amazing", "worst ever", "not bad", "excellent", "sucks", "loved it"]
-labels = [0, 1, 1, 0, 1, 1, 0, 1]  # 0 = negative, 1 = positive
-
-# 2. Tokenize and pad
-tokenizer = Tokenizer()
-tokenizer.fit_on_texts(comments)
-sequences = tokenizer.texts_to_sequences(comments)
-padded = pad_sequences(sequences, padding='post')
-
-# 3. Define CNN model
-vocab_size = len(tokenizer.word_index) + 1
-model = Sequential([
-    Embedding(input_dim=vocab_size, output_dim=8, input_length=padded.shape[1]),
-    Conv1D(filters=16, kernel_size=3, activation='relu', padding='same'),  # <== fixed here
-    GlobalMaxPooling1D(),
-    Dense(1, activation='sigmoid')
-])
-
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# 4. Train
-model.fit(padded, np.array(labels), epochs=20, verbose=0)
-
-# 5. Predict and report
-preds = (model.predict(padded) > 0.5).astype("int32").flatten()
-print("Classification Report:\n")
-print(classification_report(labels, preds))
-
-
-
-
-
-
-
-
-
-
-import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, GRU, Dense
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import classification_report
-
-# 1. Sample dataset
-texts = ["worst movie", "awesome experience", "not good", "loved it", "bad", "fantastic", "hate it", "superb"]
-labels = [0, 1, 0, 1, 0, 1, 0, 1]  # 0 = negative, 1 = positive
-
-# 2. Tokenization and padding
-tokenizer = Tokenizer()
-tokenizer.fit_on_texts(texts)
-seqs = tokenizer.texts_to_sequences(texts)
-padded = pad_sequences(seqs, padding='post')
-
-# 3. Define GRU model
-vocab_size = len(tokenizer.word_index) + 1
-model = Sequential([
-    Embedding(input_dim=vocab_size, output_dim=8, input_length=padded.shape[1]),
-    GRU(16),
-    Dense(1, activation='sigmoid')
-])
-
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# 4. Train
-model.fit(padded, np.array(labels), epochs=20, verbose=0)
-
-# 5. Evaluate
-preds = (model.predict(padded) > 0.5).astype("int32").flatten()
-print("Classification Report:\n")
-print(classification_report(labels, preds))
-
-
-</pre>
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Load data
+data = pd.read_csv(r"C:\Users\ARSHAN\Downloads\LR.csv")
+X = data['colA'].values
+y = data['colB'].values
+
+# Simple LWR: Use a basic weighted average of nearby points
+def simple_lwr(x_query, X, y, window_size=1.0):
+    # Find weights based on distance (simpler weighting)
+    distances = np.abs(X - x_query)
+    weights = np.exp(-distances / window_size)  # Simple exponential decay
+    
+    # Weighted average for prediction
+    weighted_y = y * weights
+    total_weight = np.sum(weights)
+    return np.sum(weighted_y) / total_weight if total_weight > 0 else np.mean(y)
+
+# Generate prediction points
+X_pred = np.linspace(min(X), max(X), 100)
+y_pred = np.array([simple_lwr(x, X, y, window_size=1.0) for x in X_pred])
+
+# Plot
+plt.scatter(X, y, color='green', label='Original Data')
+plt.plot(X_pred, y_pred, color='red', label='LWR Fit')
+plt.xlabel('ColA')
+plt.ylabel('ColB')
+plt.title('Simple Locally Weighted Regression')
+plt.legend()
+plt.show()import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Load data
+data = pd.read_csv(r"C:\Users\ARSHAN\Downloads\LR.csv")
+X = data['colA'].values
+y = data['colB'].values
+
+# Simple LWR: Use a basic weighted average of nearby points
+def simple_lwr(x_query, X, y, window_size=1.0):
+    # Find weights based on distance (simpler weighting)
+    distances = np.abs(X - x_query)
+    weights = np.exp(-distances / window_size)  # Simple exponential decay
+    
+    # Weighted average for prediction
+    weighted_y = y * weights
+    total_weight = np.sum(weights)
+    return np.sum(weighted_y) / total_weight if total_weight > 0 else np.mean(y)
+
+# Generate prediction points
+X_pred = np.linspace(min(X), max(X), 100)
+y_pred = np.array([simple_lwr(x, X, y, window_size=1.0) for x in X_pred])
+
+# Plot
+plt.scatter(X, y, color='green', label='Original Data')
+plt.plot(X_pred, y_pred, color='red', label='LWR Fit')
+plt.xlabel('ColA')
+plt.ylabel('ColB')
+plt.title('Simple Locally Weighted Regression')
+plt.legend()
+plt.show()
 
 
 
